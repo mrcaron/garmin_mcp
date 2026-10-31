@@ -1,0 +1,16 @@
+# Claude's connector UI cannot send an Authorization header, so the secret lives
+# in the URL path. Caddy checks the path, then adds the Bearer token the server
+# requires. Anything else gets a 404.
+:8080 {
+	@mcp path /{$MCP_SECRET}/mcp
+	handle @mcp {
+		rewrite * /mcp
+		reverse_proxy garmin-mcp:8000 {
+			header_up Authorization "Bearer {$GARMIN_MCP_HTTP_TOKEN}"
+			flush_interval -1
+		}
+	}
+	handle {
+		respond "Not found" 404
+	}
+}

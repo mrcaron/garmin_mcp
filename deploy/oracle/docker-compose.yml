@@ -1,0 +1,45 @@
+# Garmin MCP on an always-free VM, published through a Cloudflare Tunnel.
+#
+#   Claude --HTTPS--> Cloudflare --tunnel--> cloudflared --> caddy --> garmin-mcp
+#
+# Nothing listens on a public port: cloudflared dials out to Cloudflare.
+# See README.md in this directory for the full walkthrough.
+services:
+  garmin-mcp:
+    build:
+      context: ../..
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    environment:
+      GARMIN_MCP_TRANSPORT: streamable-http
+      GARMIN_MCP_HOST: 0.0.0.0
+      GARMIN_MCP_PORT: "8000"
+      GARMIN_MCP_STATELESS_HTTP: "true"   # avoids "Session not found" after idle gaps
+      GARMIN_MCP_HTTP_TOKEN: ${GARMIN_MCP_HTTP_TOKEN:?set in .env}
+    volumes:
+      - garmin-tokens:/root/.garminconnect  # OAuth tokens persist across restarts
+    expose:
+      - "8000"                              # internal only, not published to the host
+
+  caddy:
+    image: caddy:2
+    restart: unless-stopped
+    environment:
+      MCP_SECRET: ${MCP_SECRET:?set in .env}
+      GARMIN_MCP_HTTP_TOKEN: ${GARMIN_MCP_HTTP_TOKEN:?set in .env}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+    depends_on:
+      - garmin-mcp
+
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    restart: unless-stopped
+    command: tunnel --no-autoupdate run
+    environment:
+      TUNNEL_TOKEN: ${TUNNEL_TOKEN:?set in .env}
+    depends_on:
+      - caddy
+
+volumes:
+  garmin-tokens:
