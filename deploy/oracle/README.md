@@ -8,20 +8,29 @@ Result: Claude connects to `https://garmin.<your-domain>/<MCP_SECRET>/mcp`.
 - A domain on Cloudflare (free plan). Quick tunnels (`trycloudflare.com`) change URL
   on every restart, so they are not suitable for a Claude connector.
 
-## 1. Create the tunnel (Cloudflare dashboard)
-1. Zero Trust > Networks > Tunnels > Create tunnel > Cloudflared. Name it `garmin-mcp`.
-2. Copy the **tunnel token** from the install command (the long string after `--token`).
-3. Public hostname: `garmin.<your-domain>`, Service type `HTTP`, URL `caddy:8080`.
-
-## 2. Set up the VM
+## 1. Set up the VM
 ```bash
 sudo apt-get update && sudo apt-get install -y docker.io docker-compose-v2 git
 sudo usermod -aG docker $USER && newgrp docker
 git clone https://github.com/mrcaron/garmin_mcp && cd garmin_mcp/deploy/oracle
 cp .env.example .env
-# fill in .env: openssl rand -hex 32 for MCP_SECRET and GARMIN_MCP_HTTP_TOKEN, plus TUNNEL_TOKEN
+# fill in .env: openssl rand -hex 32 for MCP_SECRET and GARMIN_MCP_HTTP_TOKEN
 chmod 600 .env
 ```
+
+## 2. Create the tunnel (on the VM, from the cloned repo)
+Install `cloudflared` on the VM ([downloads](https://github.com/cloudflare/cloudflared/releases);
+on Ubuntu ARM: `curl -fsSL -o cloudflared.deb https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-arm64.deb && sudo dpkg -i cloudflared.deb`; use `amd64` on x86), then:
+```bash
+cloudflared tunnel login                  # prints a URL; open it, pick your domain
+cloudflared tunnel create garmin-mcp      # prints the tunnel ID, writes ~/.cloudflared/<ID>.json
+cloudflared tunnel route dns garmin-mcp garmin.<your-domain>   # adds one CNAME, nothing else changes
+cd ~/garmin_mcp/deploy/oracle
+cp ~/.cloudflared/<ID>.json cloudflared/
+cp cloudflared/config.yml.example cloudflared/config.yml   # replace <TUNNEL_ID> and the hostname
+chmod 600 cloudflared/*.json
+```
+The credentials JSON is a secret: it is git-ignored, don't share it.
 
 ## 3. Log in to Garmin once (handles MFA)
 ```bash

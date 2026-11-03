@@ -35,9 +35,11 @@ services:
   cloudflared:
     image: cloudflare/cloudflared:latest
     restart: unless-stopped
-    command: tunnel --no-autoupdate run
-    environment:
-      TUNNEL_TOKEN: ${TUNNEL_TOKEN:?set in .env}
+    # Locally managed tunnel: reads ./cloudflared/config.yml and the credentials
+    # JSON written by `cloudflared tunnel create` (see README step 1).
+    command: tunnel --no-autoupdate --config /etc/cloudflared/config.yml run
+    volumes:
+      - ./cloudflared:/etc/cloudflared:ro
     depends_on:
       - caddy
 
