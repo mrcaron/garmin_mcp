@@ -1,6 +1,6 @@
 # Copy to config.yml and fill in. Paths are inside the container.
-tunnel: <TUNNEL_ID>
-credentials-file: /etc/cloudflared/<TUNNEL_ID>.json
+tunnel: eddf2fa0-9d75-418e-b283-1d5220abbdc6
+credentials-file: /etc/cloudflared/eddf2fa0-9d75-418e-b283-1d5220abbdc6.json
 ingress:
   - hostname: garmin.<your-domain>
     service: http://caddy:8080
