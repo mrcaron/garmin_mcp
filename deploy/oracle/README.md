@@ -28,9 +28,10 @@ cloudflared tunnel route dns garmin-mcp garmin.<your-domain>   # adds one CNAME,
 cd ~/garmin_mcp/deploy/oracle
 cp ~/.cloudflared/<ID>.json cloudflared/
 cp cloudflared/config.yml.example cloudflared/config.yml   # replace <TUNNEL_ID> and the hostname
-chmod 600 cloudflared/*.json
+chmod 644 cloudflared/*.json   # the container runs as another user and must be able to read it
 ```
-The credentials JSON is a secret: it is git-ignored, don't share it.
+The credentials JSON is a secret: it is git-ignored, don't share it. It needs mode 644 because the container runs as a different user.
+If the tunnel logs QUIC timeouts, `--protocol http2` (already set in the compose file) avoids the UDP 7844 requirement.
 
 ## 3. Log in to Garmin once (handles MFA)
 ```bash
